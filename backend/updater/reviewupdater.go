@@ -1,3 +1,4 @@
+// Package updater provides most of the logic for fetching reviews and managing app review cache
 package updater
 
 import (
@@ -15,10 +16,12 @@ import (
 	"github.com/marcuswu/app-reviews/models"
 )
 
+// appFiles is a small utility function for returning a list of cache files
 func appFiles() ([]string, error) {
 	return filepath.Glob("./App-[0-9]*.json")
 }
 
+// nextApp returns the next app cache to refresh or an error if there is nothing to update
 func nextApp(files []string) (string, error) {
 	oldest := time.Unix(0, 0)
 	oldestId := ""
@@ -48,6 +51,7 @@ func nextApp(files []string) (string, error) {
 	return oldestId, nil
 }
 
+// FetchAppReviews retrieves reviews within config.OLDEST_REVIEW_HOURS age for the provided app id
 func FetchAppReviews(appId string) (models.AppReviews, error) {
 	page := 1
 	reviews := make(models.AppReviews, 0, config.OLDEST_REVIEW_HOURS)
@@ -93,10 +97,12 @@ func FetchAppReviews(appId string) (models.AppReviews, error) {
 	return reviews, nil
 }
 
+// fileForAppId returns the filename to store or retrieve app reviews to for a given app id
 func fileForAppId(appId string) string {
 	return fmt.Sprintf("App-%s.json", appId)
 }
 
+// SaveReviews saves a list of app reviews to cache
 func SaveReviews(appId string, reviews models.AppReviews) error {
 	filename := fileForAppId(appId)
 	file, err := os.OpenFile(filename, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0666)
@@ -107,6 +113,8 @@ func SaveReviews(appId string, reviews models.AppReviews) error {
 	return models.SaveReviews(file, reviews)
 }
 
+// LoadReviews loads an app's cached app reviews.
+// Returns an error if unable to read the reviews or if the cache is too stale to use
 func LoadReviews(appId string) (models.AppReviews, error) {
 	filename := fileForAppId(appId)
 
@@ -131,6 +139,7 @@ func LoadReviews(appId string) (models.AppReviews, error) {
 	return models.LoadReviews(file)
 }
 
+// Look at cached app reviews and refresh the oldest one that is expired (if any)
 func UpdateNext() error {
 	apps, err := appFiles()
 	if err != nil {

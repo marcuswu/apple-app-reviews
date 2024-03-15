@@ -9,6 +9,7 @@ import (
 	"time"
 )
 
+// Labeled field helps to flatten verbose RSS structure where a field is an object containing a label
 type LabeledField string
 
 func (lf *LabeledField) UnmarshalJSON(data []byte) error {
@@ -24,6 +25,7 @@ func (lf *LabeledField) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// Review time helps to flatten verbose RSS structure where a time field is an object containing a label
 type ReviewTime time.Time
 
 func (rt *ReviewTime) UnmarshalJSON(data []byte) error {
@@ -40,6 +42,8 @@ func (rt *ReviewTime) UnmarshalJSON(data []byte) error {
 
 }
 
+// Review rating helps to flatten verbose RSS structure where an integer review field is an object
+// containing a label
 type ReviewRating int
 
 func (rr *ReviewRating) UnmarshalJSON(data []byte) error {
@@ -62,6 +66,8 @@ func (rr *ReviewRating) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// Review link helps to flatten verbose RSS structure where an app's link is an object
+// containing attibutes and href under that
 type ReviewLink string
 
 func (rl *ReviewLink) UnmarshalJSON(data []byte) error {
@@ -79,6 +85,7 @@ func (rl *ReviewLink) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// AppleAuthor helps us unmarshal RSS Labeled fields within the author field
 type AppleAuthor struct {
 	Name string `json:"name"`
 	Uri  string `json:"uri"`
@@ -100,11 +107,13 @@ func (a *AppleAuthor) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// Author is a flattened Author struct we can save to local cache in a simplified format
 type Author struct {
 	Name string `json:"name"`
 	Uri  string `json:"uri"`
 }
 
+// AppleAppReview is a review object with custom unmarshalling for the verbose Apple RSS format
 type AppleAppReview struct {
 	Author  Author    `json:"author"`
 	Updated time.Time `json:"updated"`    // updated/label
@@ -114,10 +123,6 @@ type AppleAppReview struct {
 	Title   string    `json:"title"`      // title/label
 	Content string    `json:"content"`    // content/label
 	Link    string    `json:"link"`       // link/attributes/href
-}
-
-func (ar *AppleAppReview) String() string {
-	return fmt.Sprintf("{\n\tAuthor Name: \"%s\",\n\tAuthor URL: \"%s\",\n\tLast Update: \"%s\",\n\tRating: %d,\n\tVersion: \"%s\",\n\tId: \"%s\",\n\tTitle: \"%s\",\n\tContent: \"%s\",\n\tLink: \"%s\"\n}", ar.Author.Name, ar.Author.Uri, ar.Updated, ar.Rating, ar.Version, ar.Id, ar.Title, ar.Content, ar.Link)
 }
 
 func (ar *AppleAppReview) UnmarshalJSON(data []byte) error {
@@ -148,6 +153,7 @@ func (ar *AppleAppReview) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// AppReview is a simplified Review structure for our own local cache
 type AppReview struct {
 	Author  Author    `json:"author"`
 	Updated time.Time `json:"updated"`
@@ -162,20 +168,7 @@ type AppReview struct {
 type AppReviews []AppReview
 type AppleAppReviews []AppleAppReview
 
-func (r AppReviews) Uniq() AppReviews {
-	uniqueReviewIds := make(map[string]struct{})
-	uniqueReviews := make([]AppReview, 0, len(r))
-	for _, review := range r {
-		if _, exists := uniqueReviewIds[string(review.Id)]; exists {
-			continue
-		}
-		uniqueReviewIds[string(review.Id)] = struct{}{}
-		uniqueReviews = append(uniqueReviews, review)
-	}
-
-	return uniqueReviews
-}
-
+// After returns the app reviews whose update date is after a specified time
 func (r AppReviews) After(minTime time.Time) AppReviews {
 	sort.Slice(r, func(i, j int) bool { return time.Time(r[i].Updated).After(time.Time(r[j].Updated)) })
 	fmt.Printf("First updated date is %f hours ago\n", time.Since(r[0].Updated).Hours())
@@ -191,6 +184,7 @@ func (r AppReviews) After(minTime time.Time) AppReviews {
 	return r[:end]
 }
 
+// AppReviewFeed helps us read the verbose Apple review RSS
 type AppReviewFeed struct {
 	Reviews []AppleAppReview
 }
@@ -212,6 +206,7 @@ func (arf *AppReviewFeed) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// Load reviews from a stream
 func LoadReviews(stream io.ReadCloser) (AppReviews, error) {
 	data, err := io.ReadAll(stream)
 
@@ -229,6 +224,7 @@ func LoadReviews(stream io.ReadCloser) (AppReviews, error) {
 	return reviews, nil
 }
 
+// Save reviews to a stream
 func SaveReviews(stream io.WriteCloser, reviews AppReviews) error {
 	data, err := json.Marshal(reviews)
 

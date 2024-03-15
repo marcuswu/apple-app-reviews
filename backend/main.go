@@ -13,6 +13,9 @@ import (
 	"github.com/marcuswu/app-reviews/updater"
 )
 
+// Request handler for looking up app reviews for an app.
+// Prefers local cache if within config.MAX_REVIEW_FILE_AGE_MINUTES
+// If local cache doesn't exist or is stale, fetch reviews from Apple and cache them
 func reviewRequestHandler(res http.ResponseWriter, req *http.Request) {
 	appId := req.PathValue("appId")
 	fmt.Printf("handling request for app id %s\n", appId)
