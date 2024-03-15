@@ -1,10 +1,9 @@
-import Image from "next/image";
+import AppReviews from "./components/app-reviews";
 
 export default function Home() {
   return (
     <main>
-      <input type="text" name="appId" />
-      <button type="button" onClick={loadReviews}>Load Reviews</button>
+      <AppReviews />
     </main>
   );
 }
