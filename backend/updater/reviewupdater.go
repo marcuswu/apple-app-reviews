@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/marcuswu/app-reviews/config"
 	"github.com/marcuswu/app-reviews/models"
 )
 
@@ -39,7 +40,7 @@ func nextApp(files []string) (string, error) {
 		return oldestId, errors.New("could not find an app to refresh")
 	}
 
-	if oldest.After(time.Now().Add(time.Duration(-10) * time.Minute)) {
+	if oldest.After(time.Now().Add(time.Duration(-config.OLDEST_REVIEW_HOURS) * time.Minute)) {
 		// The oldest file has been refreshed too recently to refresh again
 		return oldestId, errors.New("could not find an app to refresh")
 	}
@@ -48,31 +49,42 @@ func nextApp(files []string) (string, error) {
 }
 
 func FetchAppReviews(appId string) (models.AppReviews, error) {
-	url := fmt.Sprintf("https://itunes.apple.com/us/rss/customerreviews/id=%s/sortBy=mostRecent/page=1/json", appId)
-	req, err := http.NewRequest(http.MethodGet, url, nil)
-	if err != nil {
-		return []models.AppReview{}, err
-	}
+	page := 1
+	reviews := make(models.AppReviews, 0, config.OLDEST_REVIEW_HOURS)
+	for needMore := true; needMore; page++ {
+		url := fmt.Sprintf("https://itunes.apple.com/us/rss/customerreviews/id=%s/sortBy=mostRecent/page=%d/json",
+			appId, page)
+		req, err := http.NewRequest(http.MethodGet, url, nil)
+		if err != nil {
+			return []models.AppReview{}, err
+		}
 
-	res, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return []models.AppReview{}, err
-	}
+		res, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return []models.AppReview{}, err
+		}
 
-	resBody, err := io.ReadAll(res.Body)
-	if err != nil {
-		return []models.AppReview{}, err
-	}
+		resBody, err := io.ReadAll(res.Body)
+		if err != nil {
+			return []models.AppReview{}, err
+		}
 
-	feed := models.AppReviewFeed{}
-	if err := json.Unmarshal(resBody, &feed); err != nil {
-		return []models.AppReview{}, err
-	}
+		feed := models.AppReviewFeed{}
+		if err := json.Unmarshal(resBody, &feed); err != nil {
+			return []models.AppReview{}, err
+		}
 
-	reviews := make(models.AppReviews, 0, len(feed.Reviews))
-	for _, review := range feed.Reviews {
-		reviews = append(reviews, models.AppReview(review))
+		for _, review := range feed.Reviews {
+			reviews = append(reviews, models.AppReview(review))
+		}
+		// Keep requesting more reviews until we find a page with a review older than we need
+		needMore = time.Since(reviews[len(reviews)-1].Updated).Hours() < config.OLDEST_REVIEW_HOURS
+
+		fmt.Printf("Have %d reviews after page %d\n", len(reviews), page)
+		reviews = reviews.After(time.Now().Add(time.Duration(-config.OLDEST_REVIEW_HOURS) * time.Hour))
+		fmt.Printf("Have %d reviews after filtering\n", len(reviews))
 	}
+	fmt.Printf("Returning %d reviews", len(reviews))
 
 	return reviews, nil
 }
@@ -93,6 +105,19 @@ func SaveReviews(appId string, reviews models.AppReviews) error {
 
 func LoadReviews(appId string) (models.AppReviews, error) {
 	filename := fileForAppId(appId)
+
+	fileInfo, err := os.Stat(filename)
+	if err != nil {
+		fmt.Printf("Unable to find file %s\n", filename)
+		return nil, err
+	}
+
+	modifiedtime := fileInfo.ModTime()
+	if time.Since(modifiedtime).Minutes() > config.MAX_REVIEW_FILE_AGE_MINUTES {
+		fmt.Printf("Refresh stale file\n")
+		return nil, errors.New("stale file -- refresh it")
+	}
+
 	file, err := os.OpenFile(filename, os.O_RDONLY, 0000)
 	if err != nil {
 		fmt.Printf("Unable to find file %s\n", filename)
@@ -118,6 +143,6 @@ func UpdateNext() error {
 		return err
 	}
 
-	reviews = reviews.After(time.Now().Add(time.Duration(-48) * time.Hour))
+	reviews = reviews.After(time.Now().Add(time.Duration(-config.OLDEST_REVIEW_HOURS) * time.Hour))
 	return SaveReviews(app, reviews)
 }

@@ -7,18 +7,21 @@ import (
 	"os"
 	"os/signal"
 	"sync"
+	"time"
 
+	"github.com/marcuswu/app-reviews/config"
 	"github.com/marcuswu/app-reviews/updater"
 )
 
 func reviewRequestHandler(res http.ResponseWriter, req *http.Request) {
 	appId := req.PathValue("appId")
+	fmt.Printf("handling request for app id %s\n", appId)
 
 	reviews, err := updater.LoadReviews(appId)
 	if err != nil {
 		reviews, err = updater.FetchAppReviews(appId)
 		if err != nil {
-			http.Error(res, fmt.Sprintf("Failed to fetch app reviews: %s", err), 500)
+			http.Error(res, fmt.Sprintf("Failed to fetch app reviews: %s", err), http.StatusFailedDependency)
 			return
 		}
 		updater.SaveReviews(appId, reviews)
@@ -34,6 +37,7 @@ func main() {
 	wg.Add(1)
 	go func() {
 		for {
+			time.Sleep(1 * time.Second)
 			updater.UpdateNext()
 
 			// If there is anything on exitchan, we should stop
@@ -42,7 +46,6 @@ func main() {
 				wg.Done()
 				return
 			default:
-
 				continue
 			}
 		}
@@ -63,5 +66,5 @@ func main() {
 
 	// *** Start up request handler ***
 	http.HandleFunc("/{appId}", reviewRequestHandler)
-	http.ListenAndServe(":8000", nil)
+	http.ListenAndServe(fmt.Sprintf(":%d", config.SERVER_PORT), nil)
 }
