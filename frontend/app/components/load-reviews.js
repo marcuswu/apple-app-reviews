@@ -10,8 +10,6 @@ export default async function LoadReviews(appId) {
         console.log('got reviews ', reviews);
         return reviews
         } catch (e) {
-            console.log('failed...');
-            console.log(e);
-            return [];
+            throw new Error("Failed to load reviews");
         }
     }

@@ -78,6 +78,10 @@ func FetchAppReviews(appId string) (models.AppReviews, error) {
 			reviews = append(reviews, models.AppReview(review))
 		}
 		// Keep requesting more reviews until we find a page with a review older than we need
+		if len(reviews) < 1 {
+			needMore = false
+			continue
+		}
 		needMore = time.Since(reviews[len(reviews)-1].Updated).Hours() < config.OLDEST_REVIEW_HOURS
 
 		fmt.Printf("Have %d reviews after page %d\n", len(reviews), page)
