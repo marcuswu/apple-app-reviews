@@ -109,6 +109,7 @@ func SaveReviews(appId string, reviews models.AppReviews) error {
 	if err != nil {
 		return err
 	}
+	defer file.Close()
 
 	return models.SaveReviews(file, reviews)
 }
@@ -135,6 +136,7 @@ func LoadReviews(appId string) (models.AppReviews, error) {
 		fmt.Printf("Unable to find file %s\n", filename)
 		return nil, err
 	}
+	defer file.Close()
 
 	return models.LoadReviews(file)
 }

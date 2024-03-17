@@ -181,7 +181,7 @@ func (r AppReviews) After(minTime time.Time) AppReviews {
 		}
 	}
 
-	return r[:end]
+	return r[:end-1]
 }
 
 // AppReviewFeed helps us read the verbose Apple review RSS
@@ -207,7 +207,7 @@ func (arf *AppReviewFeed) UnmarshalJSON(data []byte) error {
 }
 
 // Load reviews from a stream
-func LoadReviews(stream io.ReadCloser) (AppReviews, error) {
+func LoadReviews(stream io.Reader) (AppReviews, error) {
 	data, err := io.ReadAll(stream)
 
 	if err != nil {
@@ -225,7 +225,7 @@ func LoadReviews(stream io.ReadCloser) (AppReviews, error) {
 }
 
 // Save reviews to a stream
-func SaveReviews(stream io.WriteCloser, reviews AppReviews) error {
+func SaveReviews(stream io.Writer, reviews AppReviews) error {
 	data, err := json.Marshal(reviews)
 
 	if err != nil {
