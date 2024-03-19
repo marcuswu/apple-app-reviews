@@ -171,14 +171,20 @@ type AppleAppReviews []AppleAppReview
 // After returns the app reviews whose update date is after a specified time
 func (r AppReviews) After(minTime time.Time) AppReviews {
 	sort.Slice(r, func(i, j int) bool { return time.Time(r[i].Updated).After(time.Time(r[j].Updated)) })
-	fmt.Printf("First updated date is %f hours ago\n", time.Since(r[0].Updated).Hours())
-	fmt.Printf("Last updated date is %f hours ago\n", time.Since(r[len(r)-1].Updated).Hours())
+	if len(r) > 0 {
+		fmt.Printf("First updated date is %f hours ago\n", time.Since(r[0].Updated).Hours())
+		fmt.Printf("Last updated date is %f hours ago\n", time.Since(r[len(r)-1].Updated).Hours())
+	}
 	end := 0
 	for idx, review := range r {
 		end = idx
 		if time.Time(review.Updated).Before(minTime) {
 			break
 		}
+	}
+
+	if end < 1 {
+		return AppReviews{}
 	}
 
 	return r[:end-1]

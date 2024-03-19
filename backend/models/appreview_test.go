@@ -254,4 +254,9 @@ func TestReviewFiltering(t *testing.T) {
 		}
 		t.Errorf("expected to find 2 reviews and found %d", len(filtered))
 	}
+
+	filtered = AppReviews{}.After(filterTime)
+	if len(filtered) > 0 {
+		t.Errorf("expected to find no reviews and found %d", len(filtered))
+	}
 }
