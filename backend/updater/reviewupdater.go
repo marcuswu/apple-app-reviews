@@ -17,7 +17,7 @@ import (
 )
 
 // appFiles is a small utility function for returning a list of cache files
-func appFiles() ([]string, error) {
+func ListAppCache() ([]string, error) {
 	return filepath.Glob("./App-[0-9]*.json")
 }
 
@@ -45,7 +45,7 @@ func nextApp(files []string) (string, error) {
 		return oldestId, errors.New("could not find an app to refresh")
 	}
 
-	if oldest.After(time.Now().Add(time.Duration(-config.OLDEST_REVIEW_HOURS) * time.Minute)) {
+	if time.Since(oldest) < (time.Duration(config.MAX_REVIEW_FILE_AGE_MINUTES) * time.Minute) {
 		// The oldest file has been refreshed too recently to refresh again
 		return oldestId, errors.New("could not find an app to refresh")
 	}
@@ -144,12 +144,7 @@ func LoadReviews(appId string) (models.AppReviews, error) {
 }
 
 // Look at cached app reviews and refresh the oldest one that is expired (if any)
-func UpdateNext() error {
-	apps, err := appFiles()
-	if err != nil {
-		return err
-	}
-
+func UpdateNext(apps []string) error {
 	app, err := nextApp(apps)
 	if err != nil {
 		fmt.Printf("Error selecting next app to update: %s\n", err)
