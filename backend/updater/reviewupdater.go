@@ -23,14 +23,16 @@ func appFiles() ([]string, error) {
 
 // nextApp returns the next app cache to refresh or an error if there is nothing to update
 func nextApp(files []string) (string, error) {
-	oldest := time.Unix(0, 0)
+	oldest := time.Now()
 	oldestId := ""
 	for _, filename := range files {
 		fi, err := os.Stat(filename)
 		if err != nil {
+			fmt.Printf("Failed to stat %s: %s\n", filename, err)
 			continue
 		}
 		if !fi.Mode().IsRegular() {
+			fmt.Printf("Not a regular file %s\n", filename)
 			continue
 		}
 		if fi.ModTime().Before(oldest) {
@@ -92,7 +94,7 @@ func FetchAppReviews(appId string) (models.AppReviews, error) {
 		reviews = reviews.After(time.Now().Add(time.Duration(-config.OLDEST_REVIEW_HOURS) * time.Hour))
 		fmt.Printf("Have %d reviews after filtering\n", len(reviews))
 	}
-	fmt.Printf("Returning %d reviews", len(reviews))
+	fmt.Printf("Returning %d reviews\n", len(reviews))
 
 	return reviews, nil
 }
@@ -150,14 +152,18 @@ func UpdateNext() error {
 
 	app, err := nextApp(apps)
 	if err != nil {
+		fmt.Printf("Error selecting next app to update: %s\n", err)
 		return err
 	}
 
+	fmt.Printf("Refreshing cache for app %s\n", app)
 	reviews, err := FetchAppReviews(app)
 	if err != nil {
+		fmt.Printf("Error fetching app reviews for update: %s\n", err)
 		return err
 	}
 
 	reviews = reviews.After(time.Now().Add(time.Duration(-config.OLDEST_REVIEW_HOURS) * time.Hour))
+	fmt.Printf("Finished updating app %s\n", app)
 	return SaveReviews(app, reviews)
 }
