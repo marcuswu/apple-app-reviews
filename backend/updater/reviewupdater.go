@@ -17,8 +17,12 @@ import (
 )
 
 // appFiles is a small utility function for returning a list of cache files
-func ListAppCache() ([]string, error) {
-	return filepath.Glob("./App-[0-9]*.json")
+func ListAppCache() []string {
+	res, err := filepath.Glob("./App-[0-9]*.json")
+	if err != nil {
+		return []string{}
+	}
+	return res
 }
 
 // nextApp returns the next app cache to refresh or an error if there is nothing to update

@@ -41,7 +41,7 @@ func main() {
 	go func() {
 		for {
 			time.Sleep(1 * time.Second)
-			updater.UpdateNext()
+			updater.UpdateNext(updater.ListAppCache())
 
 			// If there is anything on exitchan, we should stop
 			select {
