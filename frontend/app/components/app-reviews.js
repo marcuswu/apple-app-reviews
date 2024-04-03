@@ -10,8 +10,8 @@ export default function AppReviews() {
     const [reviews, setReviews] = useState([]);
     const [hasPressedLoad, setHasPressedLoad] = useState(false);
     const [error, setError] = useState("")
-    function loadReviews(appId) {
-        LoadReviews(appId).then((reviews) => {
+    function loadReviews(appId, hours) {
+        LoadReviews(appId, hours).then((reviews) => {
             setError("");
             setHasPressedLoad(true);
             setReviews(reviews);
