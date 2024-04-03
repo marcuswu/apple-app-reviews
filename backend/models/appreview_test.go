@@ -245,14 +245,14 @@ func TestReviewFiltering(t *testing.T) {
 		},
 	}
 
-	filterTime, _ := time.Parse(time.RFC3339, "2024-03-10T15:27:00Z-07:00")
+	filterTime, _ := time.Parse(time.RFC3339, "2024-03-10T15:27:00-07:00")
 	filtered := reviews.After(filterTime)
 
 	if len(filtered) > 3 {
 		for _, r := range filtered {
 			t.Logf("date %s", r.Updated)
 		}
-		t.Errorf("expected to find 2 reviews and found %d", len(filtered))
+		t.Errorf("expected to find 3 reviews and found %d", len(filtered))
 	}
 
 	filtered = AppReviews{}.After(filterTime)

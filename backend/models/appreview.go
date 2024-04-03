@@ -175,19 +175,19 @@ func (r AppReviews) After(minTime time.Time) AppReviews {
 		fmt.Printf("First updated date is %f hours ago\n", time.Since(r[0].Updated).Hours())
 		fmt.Printf("Last updated date is %f hours ago\n", time.Since(r[len(r)-1].Updated).Hours())
 	}
-	end := 0
+	end := -1
 	for idx, review := range r {
-		end = idx
-		if time.Time(review.Updated).Before(minTime) {
+		if review.Updated.Before(minTime) {
 			break
 		}
+		end = idx
 	}
 
-	if end < 1 {
+	if end < 0 {
 		return AppReviews{}
 	}
 
-	return r[:end-1]
+	return r[:end+1]
 }
 
 // AppReviewFeed helps us read the verbose Apple review RSS

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"sync"
 	"time"
 
@@ -18,17 +19,27 @@ import (
 // If local cache doesn't exist or is stale, fetch reviews from Apple and cache them
 func reviewRequestHandler(res http.ResponseWriter, req *http.Request) {
 	appId := req.PathValue("appId")
+	maxHours, err := strconv.Atoi(req.URL.Query().Get("hours"))
+	if err != nil {
+		maxHours = 48
+	}
 	fmt.Printf("handling request for app id %s\n", appId)
 
 	reviews, err := updater.LoadReviews(appId)
 	if err != nil {
 		reviews, err = updater.FetchAppReviews(appId)
 		if err != nil {
-			http.Error(res, fmt.Sprintf("Failed to fetch app reviews: %s", err), http.StatusFailedDependency)
-			return
+			fmt.Printf("Encountered an error fetching app reviews: %s\n", err)
+			if len(reviews) < 1 {
+				http.Error(res, fmt.Sprintf("Failed to fetch app reviews: %s", err), http.StatusFailedDependency)
+				return
+			}
 		}
 		updater.SaveReviews(appId, reviews)
 	}
+
+	minTime := time.Now().Add(time.Duration(-maxHours) * time.Hour)
+	reviews = reviews.After(minTime)
 	json.NewEncoder(res).Encode(reviews)
 }
 

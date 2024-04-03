@@ -66,22 +66,26 @@ func FetchAppReviews(appId string) (models.AppReviews, error) {
 			appId, page)
 		req, err := http.NewRequest(http.MethodGet, url, nil)
 		if err != nil {
-			return []models.AppReview{}, err
+			return reviews, err
 		}
 
 		res, err := http.DefaultClient.Do(req)
+		if (res.StatusCode / 100) > 2 {
+			needMore = false
+			break
+		}
 		if err != nil {
-			return []models.AppReview{}, err
+			return reviews, err
 		}
 
 		resBody, err := io.ReadAll(res.Body)
 		if err != nil {
-			return []models.AppReview{}, err
+			return reviews, err
 		}
 
 		feed := models.AppReviewFeed{}
 		if err := json.Unmarshal(resBody, &feed); err != nil {
-			return []models.AppReview{}, err
+			return reviews, err
 		}
 
 		for _, review := range feed.Reviews {
@@ -92,11 +96,8 @@ func FetchAppReviews(appId string) (models.AppReviews, error) {
 			needMore = false
 			continue
 		}
-		needMore = time.Since(reviews[len(reviews)-1].Updated).Hours() < config.OLDEST_REVIEW_HOURS
 
 		fmt.Printf("Have %d reviews after page %d\n", len(reviews), page)
-		reviews = reviews.After(time.Now().Add(time.Duration(-config.OLDEST_REVIEW_HOURS) * time.Hour))
-		fmt.Printf("Have %d reviews after filtering\n", len(reviews))
 	}
 	fmt.Printf("Returning %d reviews\n", len(reviews))
 
@@ -159,10 +160,11 @@ func UpdateNext(apps []string) error {
 	reviews, err := FetchAppReviews(app)
 	if err != nil {
 		fmt.Printf("Error fetching app reviews for update: %s\n", err)
-		return err
 	}
 
-	reviews = reviews.After(time.Now().Add(time.Duration(-config.OLDEST_REVIEW_HOURS) * time.Hour))
+	if len(reviews) > 0 {
+		err = SaveReviews(app, reviews)
+	}
 	fmt.Printf("Finished updating app %s\n", app)
-	return SaveReviews(app, reviews)
+	return err
 }
